@@ -1,96 +1,89 @@
-use std::io;
-use regex::Regex;
+use rand::Rng;
 
-fn print_board(players_board: &[[i32; 10]; 10]) {
-    println!("   A  B  C  D  E  F  G  H  I  J");
+fn print_board(players_board: &[[i32; 10]; 10], computers_board: &[[i32; 10]; 10]) {
+    println!("   A B C D E F G H I J         A B C D E F G H I J");
     for i in 0..10 {
-        print!("{i} ");
-        for j in 0..10 {
-            print!("| ");
-            print!("{}", players_board[i][j]);
-        }
-        println!("|");
+        print_board_line(players_board, i);
+        print!("     ");
+        print_board_line(computers_board, i);
+        println!();
     }
+    println!("      Your board                Opponent's board");
 }
 
-fn parse_position(position: &str) -> Option<(usize, usize)> {
-    let re = Regex::new(r"^[a-jA-J]\d$").unwrap();
-    if re.is_match(position) {
-        let row = position.chars().nth(0).unwrap().to_lowercase().next().unwrap() as usize - 'a' as usize;
-        let col = position.chars().nth(1).unwrap().to_digit(10).unwrap() as usize;
-        Some((row, col))
-    } else {
-        None
-    }
-}
-
-fn input_ships_pos() -> ((usize, usize), (usize, usize)) {
-    loop {
-        let mut input = String::new();
-        io::stdin().read_line(&mut input).expect("error: unable to read user input");
-
-        let input = input.trim();
-        let parts: Vec<&str> = input.split_whitespace().collect();
-
-        if parts.len() == 2 {
-            if let (Some(r1), Some(r2)) = (parse_position(parts[0]), parse_position(parts[1])) {
-                return (r1, r2);
-            }
-        }
-
-        println!("Please enter exactly two values, each in the format letter + digit (e.g. a0 b1).");
-    }
-}
-
-fn place_ship(players_board: &mut [[i32; 10]; 10], len: usize) {
-    loop {
-        println!("Where would you like to place your {} ship?", "X".repeat(len));
-        println!("Pass chosen range e.g. A0 {}0", ('A' as u8 + ((len - 1) as u8)) as char);
-
-        let ((r1_row, r1_col), (r2_row, r2_col)) = input_ships_pos();
-
-        if r1_row == r2_row && (r1_col as isize - r2_col as isize).abs() == (len - 1) as isize {
-            let start = r1_col.min(r2_col);
-            for i in 0..len {
-                players_board[start + i][r1_col] = 1;
-            }
-            println!("Ship placed horizontally.");
-            break;
-        } else if r1_col == r2_col && (r1_row as isize - r2_row as isize).abs() == (len - 1) as isize {
-            let start = r1_row.min(r2_row);
-            for i in 0..len {
-                players_board[r1_row][start + i] = 1;
-            }
-            println!("Ship placed vertically.");
-            break;
+fn print_board_line(board: &[[i32; 10]; 10], i: usize) {
+    print!("{} ", i);
+    for j in 0..10 {
+        print!("|");
+        if board[i][j] == 0 {
+            print!(" ");
         } else {
-            println!(
-                "Invalid placement. Ensure the ship is aligned and has a length of {}.",
-                len
-            );
+            print!("X");
+        }
+    }
+    print!("|");
+}
+
+fn can_place_ship(board: &[[i32; 10]; 10], x: usize, y: usize, length: usize, horizontal: bool) -> bool {
+    let (dx, dy) = if horizontal { (0, 1) } else { (1, 0) };
+
+    for i in 0..length {
+        let nx = x + i * dx;
+        let ny = y + i * dy;
+
+        if nx >= 10 || ny >= 10 || board[nx][ny] != 0 {
+            return false;
+        }
+
+        for dx in -1..=1 {
+            for dy in -1..=1 {
+                let sx = nx as isize + dx;
+                let sy = ny as isize + dy;
+                if sx >= 0 && sx < 10 && sy >= 0 && sy < 10 && board[sx as usize][sy as usize] != 0 {
+                    return false;
+                }
+            }
+        }
+    }
+    true
+}
+
+
+fn place_ship(board: &mut [[i32; 10]; 10], length: usize) {
+    let mut rng = rand::thread_rng();
+    loop {
+        let x = rng.gen_range(0..10);
+        let y = rng.gen_range(0..10);
+        let horizontal = rng.gen_bool(0.5);
+        if can_place_ship(board, x, y, length, horizontal) {
+            if horizontal {
+                for i in 0..length {
+                    board[x][y + i] = 1;
+                }
+            } else {
+                for i in 0..length {
+                    board[x + i][y] = 1;
+                }
+            }
+            break;
         }
     }
 }
 
-
-fn place_users_ships(players_board: &mut [[i32; 10]; 10]) {
-    place_ship(players_board, 5);
-    print_board(&players_board);
-    place_ship(players_board, 4);
-    print_board(&players_board);
-    place_ship(players_board, 3);
-    print_board(&players_board);
-    place_ship(players_board, 3);
-    print_board(&players_board);
-    place_ship(players_board, 2);
-    print_board(&players_board);
+fn place_ships(board: &mut [[i32; 10]; 10]) {
+    place_ship(board, 5);
+    place_ship(board, 4);
+    place_ship(board, 3);
+    place_ship(board, 3); 
+    place_ship(board, 2);
 }
 
 fn main() {
     println!("Hello, world!");
     let mut players_board: [[i32; 10]; 10] = [[0; 10]; 10];
+    let mut computers_board: [[i32; 10]; 10] = [[0; 10]; 10];
 
-    print_board(&players_board);
-    println!();
-    place_users_ships(&mut players_board);
+    place_ships(&mut players_board);
+    place_ships(&mut computers_board);
+    print_board(&players_board, &computers_board);
 }
