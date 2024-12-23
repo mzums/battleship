@@ -25,8 +25,10 @@ fn print_board_line(board: &[[i32; 10]; 10], i: usize) {
         print!("|");
         if board[i][j] == 0 {
             print!(" ");
-        } else {
+        } else if (1..6).contains(&board[i][j]) {
             print!("X");
+        } else {
+            print!("#");
         }
     }
     print!("|");
@@ -92,14 +94,19 @@ fn play(players_board: &mut [[i32; 10]; 10], computers_board: &mut [[i32; 10]; 1
     let (row, col) = get_position_input();
     hit(computers_board, (row, col), computers_ship_lifes);
     println!("Opponent's turn!");
+    //computers_turn();
 }
 
+/*fn computers_turn(players_board: &mut [[i32; 10]; 10], players_ship_lifes: &mut [i32; 6]) {
+
+}*/
+
 fn hit(board: &mut [[i32; 10]; 10], (row, col): (usize, usize), ship_lifes: &mut [i32; 6]) {
-    if board[col][row] == 0 {
+    if board[row][col] == 0 {
         println!("You missed!");
         board[row][col] = 8;
     }
-    else if board[col][row] >= 8 {
+    else if board[row][col] >= 8 {
         println!("Already tried this one!");
     }
     else {
@@ -128,8 +135,8 @@ fn get_position_input() -> (usize, usize) {
 fn parse_position_input(position: &str) -> Option<(usize, usize)> {
     let re = Regex::new(r"^[a-jA-J]\d$").unwrap();
     if re.is_match(position) {
-        let row = position.chars().nth(0)?.to_lowercase().next()? as usize - 'a' as usize;
-        let col = position.chars().nth(1)?.to_digit(10)? as usize;
+        let col = position.chars().nth(0)?.to_lowercase().next()? as usize - 'a' as usize;
+        let row = position.chars().nth(1)?.to_digit(10)? as usize;
         Some((row, col))
     } else {
         None
@@ -148,4 +155,5 @@ fn main() {
     print_board(&players_board, &computers_board);
 
     play(&mut players_board, &mut computers_board, &mut players_ship_lifes, &mut computers_ship_lifes);
+    print_board(&players_board, &computers_board);
 }
