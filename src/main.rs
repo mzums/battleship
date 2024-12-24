@@ -8,6 +8,11 @@ use regex::Regex;
 // 9 - hit
 
 
+const MAX_SHIP_LIFES: [i32; 6] = [0, 5, 4, 3, 3, 2];
+const EMPTY: [i32; 1] = [0];
+const TRIED: [i32; 6] = [0, 1, 2, 3, 4, 5];
+
+
 fn print_board(players_board: &[[i32; 10]; 10], computers_board: &[[i32; 10]; 10]) {
     println!("   A B C D E F G H I J         A B C D E F G H I J");
     for i in 0..10 {
@@ -34,14 +39,14 @@ fn print_board_line(board: &[[i32; 10]; 10], i: usize) {
     print!("|");
 }
 
-fn can_place_ship(board: &[[i32; 10]; 10], x: usize, y: usize, length: usize, horizontal: bool) -> bool {
+fn can_place_ship(board: &[[i32; 10]; 10], x: usize, y: usize, length: usize, horizontal: bool, permitted: &[i32]) -> bool {
     let (dx, dy) = if horizontal { (0, 1) } else { (1, 0) };
 
     for i in 0..length {
         let nx = x + i * dx;
         let ny = y + i * dy;
 
-        if nx >= 10 || ny >= 10 || board[nx][ny] != 0 {
+        if nx >= 10 || ny >= 10 || !permitted.contains(&board[nx][ny]) {
             return false;
         }
 
@@ -49,7 +54,8 @@ fn can_place_ship(board: &[[i32; 10]; 10], x: usize, y: usize, length: usize, ho
             for dy in -1..=1 {
                 let sx = nx as isize + dx;
                 let sy = ny as isize + dy;
-                if sx >= 0 && sx < 10 && sy >= 0 && sy < 10 && board[sx as usize][sy as usize] != 0 {
+                if sx >= 0 && sx < 10 && sy >= 0 && sy < 10 && !permitted.contains(&board[sx as usize][sy as usize])
+                {
                     return false;
                 }
             }
@@ -66,7 +72,7 @@ fn place_ship(board: &mut [[i32; 10]; 10], length: usize, id: i32, ship_lifes: &
         let x = rng.gen_range(0..10);
         let y = rng.gen_range(0..10);
         let horizontal = rng.gen_bool(0.5);
-        if can_place_ship(board, x, y, length, horizontal) {
+        if can_place_ship(board, x, y, length, horizontal, &EMPTY) {
             if horizontal {
                 for i in 0..length {
                     board[x][y + i] = id;
@@ -82,11 +88,9 @@ fn place_ship(board: &mut [[i32; 10]; 10], length: usize, id: i32, ship_lifes: &
 }
 
 fn place_ships(board: &mut [[i32; 10]; 10], ship_lifes: &mut [i32; 6]) {
-    place_ship(board, 5, 1, ship_lifes);
-    place_ship(board, 4, 2, ship_lifes);
-    place_ship(board, 3, 3, ship_lifes);
-    place_ship(board, 3, 4, ship_lifes); 
-    place_ship(board, 2, 5, ship_lifes);
+    for i in 1..6 {
+        place_ship(board,MAX_SHIP_LIFES[i] as usize, i as i32, ship_lifes,);
+    }
 }
 
 fn play(players_board: &mut [[i32; 10]; 10], computers_board: &mut [[i32; 10]; 10], players_ship_lifes: &mut [i32; 6], computers_ship_lifes: &mut [i32; 6]) {
@@ -94,12 +98,35 @@ fn play(players_board: &mut [[i32; 10]; 10], computers_board: &mut [[i32; 10]; 1
     let (row, col) = get_position_input();
     hit(computers_board, (row, col), computers_ship_lifes);
     println!("Opponent's turn!");
-    //computers_turn();
+    computers_turn(players_board, players_ship_lifes);
 }
 
-/*fn computers_turn(players_board: &mut [[i32; 10]; 10], players_ship_lifes: &mut [i32; 6]) {
+fn computers_turn(players_board: &mut [[i32; 10]; 10], _players_ship_lifes: &mut [i32; 6]) {
+    let mut thermal: [[i32; 10]; 10] = [[0; 10]; 10];
+    for x in 0..10 {
+        for y in 0..10 {
+            for k in 0..2 {
+                if can_place_ship(&players_board, x, y, 5, k == 1, &TRIED) {
+                    for i in 0..5 {
+                        if k == 1 {
+                            thermal[x][y + i] += 1;
+                        } else {
+                            thermal[x + i][y] += 1;
+                        }
+                    }
+                }
+            }
+        }
+    }
 
-}*/
+    for i in 0..10 {
+        for j in 0..10 {
+            print!("{} ", thermal[i][j]);
+        }
+        println!();
+    }
+    
+}
 
 fn hit(board: &mut [[i32; 10]; 10], (row, col): (usize, usize), ship_lifes: &mut [i32; 6]) {
     if board[row][col] == 0 {
@@ -144,13 +171,13 @@ fn parse_position_input(position: &str) -> Option<(usize, usize)> {
 }
 
 fn main() {
-    println!("Hello, world!");
     let mut players_board: [[i32; 10]; 10] = [[0; 10]; 10];
     let mut computers_board: [[i32; 10]; 10] = [[0; 10]; 10];
     let mut players_ship_lifes: [i32; 6] = [0; 6];
     let mut computers_ship_lifes: [i32; 6] = [0; 6];
-
+    
     place_ships(&mut players_board, &mut players_ship_lifes);
+    println!("Hello, world!");
     place_ships(&mut computers_board, &mut computers_ship_lifes);
     print_board(&players_board, &computers_board);
 
