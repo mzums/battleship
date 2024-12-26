@@ -1,7 +1,13 @@
 [package]
-name = "battleship"
+name = "simple_battleship"
 version = "0.1.0"
 edition = "2021"
+description = "A simple Battleship game implemented in Rust."
+license = "MIT"
+repository = "https://github.com/mzums/battleship"
+keywords = ["game", "battleship", "cli"]
+categories = ["game", "command-line-interface"]
+readme = "README.md"
 
 [dependencies]
 regex = "1.11.1"
