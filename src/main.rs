@@ -2,21 +2,22 @@ use rand::Rng;
 use std::io;
 use regex::Regex;
 use std::cmp::max;
+use rand::seq::SliceRandom;
 
 // 0 - empty
-// 1-5 - id
-// 8 - missed
-// 9 - hit
+// 1 - ship
+// 2 - hit
+// 3 - missed
 
 
 const MAX_SHIP_LIFES: [i32; 6] = [0, 5, 4, 3, 3, 2];
-const EMPTY: [i32; 1] = [0];
-const TRIED: [i32; 6] = [0, 1, 2, 3, 4, 5];
-const EMPTY2: [i32; 3] = [0, 8, 9];
-const TRIED2: [i32; 7] = [0, 1, 2, 3, 4, 5, 8];
+const EMPTY1: [i32; 1] = [0];
+const TRIED1: [i32; 2] = [0, 1];
+const EMPTY2: [i32; 1] = [0];
+const TRIED2: [i32; 3] = [0, 1, 3];
 
 
-fn print_board(players_board: &[[i32; 10]; 10], computers_board: &[[i32; 10]; 10]) {
+fn print_board(players_board: &[[[i32; 2]; 10]; 10], computers_board: &[[[i32; 2]; 10]; 10]) {
     println!("   A B C D E F G H I J         A B C D E F G H I J");
     for i in 0..10 {
         print_board_line(players_board, i);
@@ -27,13 +28,14 @@ fn print_board(players_board: &[[i32; 10]; 10], computers_board: &[[i32; 10]; 10
     println!("      Your board                Opponent's board");
 }
 
-fn print_board_line(board: &[[i32; 10]; 10], i: usize) {
+fn print_board_line(board: &[[[i32; 2]; 10]; 10], i: usize) {
     print!("{} ", i);
     for j in 0..10 {
         print!("|");
-        if board[i][j] == 0 {
+        //print!("{}", board[i][j][0]);
+        if board[i][j][0] == 0 {
             print!(" ");
-        } else if (1..6).contains(&board[i][j]) {
+        } else if board[i][j][0] == 1 {
             print!("X");
         } else {
             print!("#");
@@ -42,7 +44,7 @@ fn print_board_line(board: &[[i32; 10]; 10], i: usize) {
     print!("|");
 }
 
-fn can_place_ship(board: &[[i32; 10]; 10], x: usize, y: usize, length: usize, horizontal: bool, permitted: &[i32], permitted2: &[i32]) -> bool {
+fn can_place_ship(board: &[[[i32; 2]; 10]; 10], x: usize, y: usize, length: usize, horizontal: bool, permitted1: &[i32], permitted2: &[i32]) -> bool {
     let (dx, dy) = if horizontal { (0, 1) } else { (1, 0) };
 
     for i in 0..length {
@@ -50,15 +52,18 @@ fn can_place_ship(board: &[[i32; 10]; 10], x: usize, y: usize, length: usize, ho
         let ny = y + i * dy;
 
 
-        if nx >= 10 || ny >= 10 || !permitted.contains(&board[nx][ny]) {
+        if nx >= 10 || ny >= 10 || !permitted1.contains(&board[nx][ny][0]) {
             return false;
         }
 
         for dx in -1..=1 {
             for dy in -1..=1 {
+                if dx == 0 && dy == 0 {
+                    continue;
+                }
                 let sx = nx as isize + dx;
                 let sy = ny as isize + dy;
-                if sx >= 0 && sx < 10 && sy >= 0 && sy < 10 && !permitted2.contains(&board[sx as usize][sy as usize])
+                if sx >= 0 && sx < 10 && sy >= 0 && sy < 10 && !permitted2.contains(&board[sx as usize][sy as usize][0])
                 {
                     return false;
                 }
@@ -68,22 +73,23 @@ fn can_place_ship(board: &[[i32; 10]; 10], x: usize, y: usize, length: usize, ho
     true
 }
 
-
-fn place_ship(board: &mut [[i32; 10]; 10], length: usize, id: i32, ship_lifes: &mut [i32; 6]) {
+fn place_ship(board: &mut [[[i32; 2]; 10]; 10], length: usize, id: i32, ship_lifes: &mut [i32; 6]) {
     ship_lifes[id as usize] = length as i32;
     let mut rng = rand::thread_rng();
     loop {
         let x = rng.gen_range(0..10);
         let y = rng.gen_range(0..10);
         let horizontal = rng.gen_bool(0.5);
-        if can_place_ship(board, x, y, length, horizontal, &EMPTY, &EMPTY2) {
+        if can_place_ship(board, x, y, length, horizontal, &EMPTY1, &EMPTY2) {
             if horizontal {
                 for i in 0..length {
-                    board[x][y + i] = id;
+                    board[x][y + i][1] = id;
+                    board[x][y + i][0] = 1;
                 }
             } else {
                 for i in 0..length {
-                    board[x + i][y] = id;
+                    board[x + i][y][1] = id;
+                    board[x + i][y][0] = 1;
                 }
             }
             break;
@@ -91,48 +97,61 @@ fn place_ship(board: &mut [[i32; 10]; 10], length: usize, id: i32, ship_lifes: &
     }
 }
 
-fn place_ships(board: &mut [[i32; 10]; 10], ship_lifes: &mut [i32; 6]) {
+fn place_ships(board: &mut [[[i32; 2]; 10]; 10], ship_lifes: &mut [i32; 6]) {
     for i in 1..6 {
-        place_ship(board,MAX_SHIP_LIFES[i] as usize, i as i32, ship_lifes,);
+        place_ship(board,MAX_SHIP_LIFES[i] as usize, i as i32, ship_lifes);
     }
 }
 
-fn play(players_board: &mut [[i32; 10]; 10], computers_board: &mut [[i32; 10]; 10], players_ship_lifes: &mut [i32; 6], computers_ship_lifes: &mut [i32; 6]) {
-    println!("Your turn!");
-    let (row, col) = get_position_input();
-    hit(computers_board, (row, col), computers_ship_lifes);
-    println!("Opponent's turn!");
-    computers_turn(players_board, players_ship_lifes);
-    print_board(&players_board, &computers_board);
-
-    println!("Your turn!");
-    let (row, col) = get_position_input();
-    hit(computers_board, (row, col), computers_ship_lifes);
-    println!("Opponent's turn!");
-    computers_turn(players_board, players_ship_lifes);
-    print_board(&players_board, &computers_board);
-
-    println!("Your turn!");
-    let (row, col) = get_position_input();
-    hit(computers_board, (row, col), computers_ship_lifes);
-    println!("Opponent's turn!");
-    computers_turn(players_board, players_ship_lifes);
-    print_board(&players_board, &computers_board);
+fn did_win(ship_lifes: &mut [i32; 6]) -> bool{
+    for i in ship_lifes {
+        if *i != 0 {
+            return false;
+        }
+    }
+    return true;
 }
 
-fn create_heatmap(players_board: &mut [[i32; 10]; 10]) -> [[i32; 10]; 10] {
+fn check_if_end(players_ship_lifes: &mut [i32; 6], computers_ship_lifes: &mut [i32; 6]) -> bool {
+    if did_win(players_ship_lifes) || did_win(computers_ship_lifes) {
+        return true;
+    }
+    return false;
+}
+
+fn play(players_board: &mut [[[i32; 2]; 10]; 10], computers_board: &mut [[[i32; 2]; 10]; 10], players_ship_lifes: &mut [i32; 6], computers_ship_lifes: &mut [i32; 6]) {
+    let mut last_hit: (usize, usize) = (10, 10);
+
+    while !check_if_end(players_ship_lifes, computers_ship_lifes) {
+        println!("Your turn!");
+        //let (row, col) = get_position_input();
+        //hit(computers_board, (row, col), computers_ship_lifes);
+        println!("Opponent's turn!");
+        let last_move: (usize, usize) = computers_turn(players_board, players_ship_lifes, last_hit);
+        if players_board[last_move.0][last_move.1][0] == 2 {
+            last_hit = last_move;
+        }
+        print_board(&players_board, &computers_board);
+    }
+}
+
+fn create_heatmap(players_board: &mut [[[i32; 2]; 10]; 10], players_ship_lifes: &mut [i32; 6]) -> [[i32; 10]; 10] {
     let mut heatmap: [[i32; 10]; 10] = [[0; 10]; 10];
 
     for y in 0..10 {
         for x in 0..10 {
-            for len in &MAX_SHIP_LIFES[1..] {
+            for (index, &len) in MAX_SHIP_LIFES.iter().enumerate() {
+                if players_ship_lifes[index] == 0 {
+                    //println!("{} empty", index);
+                    continue;
+                }
                 for k in 0..2 {
-                    if can_place_ship(&players_board, x, y, *len as usize, k == 1, &TRIED, &TRIED2) {
-                        for i in 0..*len {
+                    if can_place_ship(&players_board, y, x, len as usize, k == 1, &TRIED1, &TRIED2) {
+                        for i in 0..len {
                             if k == 1 {
-                                heatmap[x][y + i as usize] += 1;
+                                heatmap[y][x + i as usize] += 1;
                             } else {
-                                heatmap[x + i as usize][y] += 1;
+                                heatmap[y + i as usize][x] += 1;
                             }
                         }
                     }
@@ -174,24 +193,90 @@ fn find_optimal_move(heatmap: [[i32; 10]; 10]) -> (usize, usize) {
     return chosen_move;
 }
 
-fn computers_turn(players_board: &mut [[i32; 10]; 10], players_ship_lifes: &mut [i32; 6]) {
-    let heatmap: [[i32; 10]; 10] = create_heatmap(players_board);
-    let chosen_move: (usize, usize) = find_optimal_move(heatmap);
-    hit(players_board, chosen_move, players_ship_lifes);
+fn did_last_sink(players_board: &mut [[[i32; 2]; 10]; 10], last_hit: (usize, usize), players_ship_lifes: &mut [i32; 6]) -> bool {
+    println!("   !!!! {}", players_board[last_hit.0][last_hit.1][1]);
+    if players_ship_lifes[players_board[last_hit.0][last_hit.1][1] as usize] == 0 {
+        return true;
+    }
+    return false;
 }
 
-fn hit(board: &mut [[i32; 10]; 10], (row, col): (usize, usize), ship_lifes: &mut [i32; 6]) {
-    if board[row][col] == 0 {
-        println!("Missed!");
-        board[row][col] = 8;
+fn continue_hitting_ship(players_board: &mut [[[i32; 2]; 10]; 10], last_hit: (usize, usize)) -> (usize, usize) {
+    let (mut x, mut y): (usize, usize) = last_hit;
+
+    let mut possibilities: [(i32, i32); 4] = [(0, 1), (1, 0), (0, -1), (-1, 0)];
+    let mut rng = rand::thread_rng();
+    possibilities.shuffle(&mut rng);
+
+    for &(x2, y2) in &possibilities {
+        let new_x: i32 = x as i32 + x2;
+        let new_y: i32 = y as i32 + y2;
+        if new_x < 0 || new_x >= 10 || new_y < 0 || new_y >= 10 {
+            continue;
+        }
+        let new_x2 = x as i32 - x2;
+        let new_y2 = y as i32 - y2;
+        if players_board[new_x as usize][new_y as usize][0] == 2 {
+            println!("{} {}", new_x, new_y);
+            println!("{} {}", new_x2, new_y2);
+            if new_x2 < 0 || new_x2 >= 10 || new_y2 < 0 || new_y2 >= 10 ||
+                players_board[new_x2 as usize][new_y2 as usize][0] == 3 {
+                loop {
+                    x = (x as i32 + x2) as usize;
+                    y = (y as i32 + y2) as usize;
+                    
+                    if players_board[x][y][0] == 0 || players_board[x][y][0] == 1 {
+                        return (x, y);
+                    }
+                }
+            }
+            return (new_x2 as usize, new_y2 as usize);
+        }
     }
-    else if board[row][col] >= 8 {
+    for &(x2, y2) in &possibilities {
+        let new_x: i32 = x as i32 + x2;
+        let new_y: i32 = y as i32 + y2;
+        if new_x < 0 || new_x >= 10 || new_y < 0 || new_y >= 10 {
+            continue;
+        }
+        if players_board[new_x as usize][new_y as usize][0] != 3 {
+            return (new_x as usize, new_y as usize);
+        }
+    }
+    return ((x as i32 + possibilities[0].0) as usize, (y as i32 + possibilities[0].1) as usize);
+}
+
+fn computers_turn(players_board: &mut [[[i32; 2]; 10]; 10], players_ship_lifes: &mut [i32; 6], last_hit: (usize, usize)) -> (usize, usize) {
+    let chosen_move: (usize, usize);
+
+    if last_hit == (10, 10) || did_last_sink(players_board, last_hit, players_ship_lifes) {
+        let heatmap: [[i32; 10]; 10] = create_heatmap(players_board, players_ship_lifes);
+        chosen_move = find_optimal_move(heatmap);
+    } else {
+        chosen_move = continue_hitting_ship(players_board, last_hit);
+    }
+    
+    hit(players_board, chosen_move, players_ship_lifes);
+    for i in players_ship_lifes {
+        println!("{i}");
+    }
+
+    return chosen_move;
+}
+
+fn hit(board: &mut [[[i32; 2]; 10]; 10], chosen_move: (usize, usize), ship_lifes: &mut [i32; 6]) {
+    let (row, col): (usize, usize) = chosen_move;
+    if board[row][col][0] == 0 {
+        println!("Missed!");
+        board[row][col][0] = 3;
+    }
+    else if board[row][col][0] == 2 || board[row][col][0] == 3 {
         println!("Already tried this one!");
     }
     else {
         println!("Hit!");
-        ship_lifes[board[row][col] as usize] -= 1;
-        board[row][col] = 9;
+        ship_lifes[board[row][col][1] as usize] -= 1;
+        board[row][col][0] = 2;
     }
 }
 
@@ -223,16 +308,15 @@ fn parse_position_input(position: &str) -> Option<(usize, usize)> {
 }
 
 fn main() {
-    let mut players_board: [[i32; 10]; 10] = [[0; 10]; 10];
-    let mut computers_board: [[i32; 10]; 10] = [[0; 10]; 10];
-    let mut players_ship_lifes: [i32; 6] = [0; 6];
-    let mut computers_ship_lifes: [i32; 6] = [0; 6];
+    let mut players_board: [[[i32; 2]; 10]; 10] = [[[0; 2]; 10]; 10];
+    let mut computers_board: [[[i32; 2]; 10]; 10] = [[[0; 2]; 10]; 10];
+    let mut players_ship_lifes: [i32; 6] = [0, 5, 4, 3, 3, 2];
+    let mut computers_ship_lifes: [i32; 6] = [0, 5, 4, 3, 3, 2];
     
-    place_ships(&mut players_board, &mut players_ship_lifes);
     println!("Hello, world!");
+    place_ships(&mut players_board, &mut players_ship_lifes);
     place_ships(&mut computers_board, &mut computers_ship_lifes);
     print_board(&players_board, &computers_board);
 
     play(&mut players_board, &mut computers_board, &mut players_ship_lifes, &mut computers_ship_lifes);
-    
 }
