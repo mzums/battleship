@@ -37,12 +37,18 @@ g { color: Green }
 - <r>#</r>: Hit shot
 - <b>X</b>: Visible ship (your ship or ship sunk by you)
 
+## 🌈 Install from crates.io
+1. Run in your shell:  
+```cargo install simple_battleship```
+2. Once installed you can play the game by running:  
+```simple_battleship```
+
 ## 🛠️ Setup Instructions
 
 1. Install Rust from [Rust's official website](https://www.rust-lang.org/).
 2. Clone this repository:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/mzums/battleship
    cd battleship
    ```
 3. Build and run the game:
@@ -60,12 +66,6 @@ g { color: Green }
 
 - **Player Input**:
   Input coordinates in the format `[Letter][Digit]` (e.g., A1). Invalid inputs prompt re-entry.
-
-## 🌈 Highlights
-
-- Smart AI opponent using Rust's powerful random and multithreading features.
-- Utilizes the `regex` crate for input validation and the `colored` crate for terminal output.
-- Responsive gameplay with a 1-second delay for the opponent's move, adding realism.
 
 ## 🚀 Future Enhancements
 
