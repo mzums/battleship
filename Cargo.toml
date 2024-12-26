@@ -6,7 +6,7 @@ description = "A simple Battleship game implemented in Rust."
 license = "MIT"
 repository = "https://github.com/mzums/battleship"
 keywords = ["game", "battleship", "cli"]
-categories = ["game", "command-line-interface"]
+categories = ["games", "command-line-interface"]
 readme = "README.md"
 
 [dependencies]
