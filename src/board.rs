@@ -1,36 +1,6 @@
 use rand::Rng;
-use colored::Colorize;
-
 use crate::{MAX_SHIPS_LIFES, EMPTY1, EMPTY2};
 
-
-pub fn print_board(players_board: &[[[i32; 2]; 10]; 10], computers_board: &[[[i32; 2]; 10]; 10], computers_ships_lifes: &mut [i32; 6]) {
-    println!("   A B C D E F G H I J         A B C D E F G H I J");
-    for i in 0..10 {
-        print_board_line(players_board, i, false, computers_ships_lifes);
-        print!("     ");
-        print_board_line(computers_board, i, true, computers_ships_lifes);
-        println!();
-    }
-    println!("      Your board                Opponent's board");
-}
-
-fn print_board_line(board: &[[[i32; 2]; 10]; 10], i: usize, hidden: bool, computers_ships_lifes: &mut [i32; 6]) {
-    print!("{} ", i);
-    for j in 0..10 {
-        print!("|");
-       if board[i][j][0] == 0 || (hidden && board[i][j][0] == 1) {
-            print!(" ");
-        } else if board[i][j][0] == 1 || (hidden && board[i][j][0] == 2 && computers_ships_lifes[board[i][j][1] as usize] == 0) {
-            print!("{}", "X".bold().blue());
-        } else if board[i][j][0] == 2 {
-            print!("{}", "#".bold().red());
-        } else {
-            print!("#");
-        }
-    }
-    print!("|");
-}
 
 pub fn can_place_ship(board: &[[[i32; 2]; 10]; 10], x: usize, y: usize, length: usize, horizontal: bool, permitted1: &[i32], permitted2: &[i32]) -> bool {
     let (dx, dy) = if horizontal { (0, 1) } else { (1, 0) };
