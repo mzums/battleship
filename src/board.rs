@@ -56,7 +56,8 @@ fn place_ship(board: &mut [[[i32; 2]; 10]; 10], length: usize, id: i32, ships_li
 }
 
 pub fn place_ships(board: &mut [[[i32; 2]; 10]; 10], ships_lifes: &mut [i32; 6]) {
-    for i in 1..6 {
-        place_ship(board,MAX_SHIPS_LIFES[i] as usize, i as i32, ships_lifes);
+    for i in (1..6).rev() {
+        println!("Placing ship of length {}", MAX_SHIPS_LIFES[i]);
+        place_ship(board, MAX_SHIPS_LIFES[i] as usize, i as i32, ships_lifes);
     }
 }

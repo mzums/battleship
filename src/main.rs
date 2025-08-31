@@ -1,11 +1,4 @@
 use clap::Parser;
-use ratatui::{
-    backend::CrosstermBackend,
-    Terminal,
-};
-use std::io::Stdout;
-use std::thread;
-use std::time::Duration;
 
 mod ai;
 mod board;
@@ -19,7 +12,6 @@ mod game;
 use crate::ui::cli;
 use crate::ui::tui;
 use crate::ui::main::UI;
-use colored::Colorize;
 
 pub const MAX_SHIPS_LIFES: [i32; 6] = [0, 5, 4, 3, 3, 2];
 pub const EMPTY1: [i32; 1] = [0];
@@ -37,42 +29,45 @@ struct Args {
 }
 
 
-fn play(ui: &mut dyn UI, game_state: &mut game::GameState) -> Result<(), Box<dyn std::error::Error>> {
-    while !game_state.check_if_end() {
-        ui.show_message("Your turn!");
-        let (row, col) = ui.get_input(game_state);
-        let message = game::GameState::hit(&mut game_state.computers_board, (row, col), &mut game_state.computers_ships_lifes);
-        ui.show_message(&message);
-        ui.render(game_state);
+fn play<U: UI>(ui: &mut U, game_state: &mut game::GameState) {
+    while !game::GameState::check_if_end(game_state) {
+        loop {
+            ui.show_message("Your turn!");
+            let (row, col) = ui.get_input(game_state);
+            game::GameState::hit(&mut game_state.computers_board, (row, col), &mut game_state.computers_ships_lifes);
+            ui.render(game_state);
 
-        if game_state.did_win(&game_state.computers_ships_lifes) {
-            break;
-        }
-
-        ui.show_message("Computer's turn!");
-        let last_move = ai::computers_turn(&mut game_state.players_board, &mut game_state.players_ships_lifes, game_state.last_hit);
-        
-        if game_state.players_board[last_move.0][last_move.1][0] == 2 {
-            game_state.last_hit = last_move;
+            if game_state.computers_board[row][col][0] != 2 {
+                break;
+            }
         }
         
-        thread::sleep(Duration::from_secs(1));
-        ui.render(game_state);
+        ui.show_message("\nOpponent's turn!");
+        
+        loop {
+            let last_move: (usize, usize) = ai::computers_turn(&mut game_state.players_board, &mut game_state.players_ships_lifes, game_state.last_hit);
+            
+            if game_state.players_board[last_move.0][last_move.1][0] == 2 {
+                game_state.last_hit = last_move;
+            }
+            println!("Computer hit at ({}, {})!", last_move.0 + 1, last_move.1 + 1);
+            
+            ui.render(game_state);
+
+            if game_state.players_board[last_move.0][last_move.1][0] != 2 {
+                break;
+            }
+        }
     }
-    
-    Ok(())
 }
 
 fn main() {
     let args = Args::parse();
-    let tui_mode = args.tui;
+    let tui = args.tui;
 
     let mut game_state = game::GameState::new();
 
-    board::place_ships(&mut game_state.players_board, &mut game_state.players_ships_lifes);
-    board::place_ships(&mut game_state.computers_board, &mut game_state.computers_ships_lifes);
-
-    if tui_mode {
+    if tui {
         let mut ui = match tui::TuiUI::new() {
             Ok(ui) => ui,
             Err(e) => {
@@ -80,32 +75,17 @@ fn main() {
                 return;
             }
         };
-
-        ui.render(&game_state);
-        if let Err(e) = play(&mut ui, &mut game_state) {
-            eprintln!("Error during game: {}", e);
-        }
+        
+        ui.show_message("Welcome to Battleship! Use arrow keys to move, Enter to shoot");
+        
+        play(&mut ui, &mut game_state);
         
         if let Err(e) = ui.cleanup() {
-            eprintln!("Failed to clean up TUI: {}", e);
+            eprintln!("Error during TUI cleanup: {}", e);
         }
     } else {
         let mut ui = cli::CliUI;
         ui.render(&game_state);
-        play(&mut ui, &mut game_state).expect("CLI game error");
-    }
-
-    if game_state.did_win(&game_state.players_ships_lifes) {
-        if tui_mode {
-            tui::UI::show_message(&mut game_state, "You lost! Computer wins!");
-            thread::sleep(Duration::from_secs(2));
-        } else {
-            println!("{}", "You lost! Computer wins!".red().bold());
-        }
-    } else {
-        if tui_mode {
-        } else {
-            println!("{}", "Congratulations! You win!".green().bold());
-        }
+        play(&mut ui, &mut game_state);
     }
 }
