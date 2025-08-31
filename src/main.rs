@@ -50,7 +50,7 @@ fn play<U: UI>(ui: &mut U, game_state: &mut game::GameState) {
             if game_state.players_board[last_move.0][last_move.1][0] == 2 {
                 game_state.last_hit = last_move;
             }
-            println!("Computer hit at ({}, {})!", last_move.0 + 1, last_move.1 + 1);
+            ui.show_message(format!("Computer hit at ({}, {})!", last_move.0 + 1, last_move.1 + 1).as_str());
             
             ui.render(game_state);
 

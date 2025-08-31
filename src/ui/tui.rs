@@ -1,11 +1,5 @@
 use ratatui::{
-    backend::CrosstermBackend,
-    widgets::{Block, Borders, Paragraph},
-    layout::{Layout, Constraint, Direction, Rect},
-    style::{Style, Color, Modifier},
-    text::{Text, Span},
-    Terminal,
-    Frame
+    backend::CrosstermBackend, layout::{Constraint, Direction, Layout, Rect}, style::{Color, Modifier, Style}, text::{Span, Text}, widgets::{Block, Borders, Paragraph}, Frame, Terminal
 };
 use ratatui::crossterm::{
     event::{self, Event, KeyCode, KeyEventKind},
@@ -37,7 +31,7 @@ impl TuiUI {
         Ok(Self {
             terminal,
             message: String::from("Welcome to Battleship! Use arrow keys to move, Enter to shoot"),
-            cursor_pos: (0, 0),
+            cursor_pos: (5, 5),
             should_quit: false,
         })
     }
@@ -77,14 +71,8 @@ impl TuiUI {
             .border_style(Style::default().fg(Color::Red));
         f.render_widget(computer_block, board_chunks[1]);
         
-        Self::draw_board(f, game_state, board_chunks[0], true);
-        Self::draw_board(f, game_state, board_chunks[1], false);
-        
-        if cursor_pos.0 < 10 && cursor_pos.1 < 10 {
-            let cell_x = board_chunks[1].x + 2 + cursor_pos.1 * 2;
-            let cell_y = board_chunks[1].y + 1 + cursor_pos.0;
-            f.set_cursor_position((cell_x, cell_y));
-        }
+        Self::draw_board(f, game_state, board_chunks[0], true, cursor_pos);
+        Self::draw_board(f, game_state, board_chunks[1], false, cursor_pos);
         
         let message_para = Paragraph::new(Text::from(message.to_string()))
             .style(Style::default().fg(Color::Green))
@@ -92,7 +80,7 @@ impl TuiUI {
         f.render_widget(message_para, chunks[2]);
     }
     
-    fn draw_board(f: &mut Frame, game_state: &game::GameState, area: Rect, is_player: bool) {
+    fn draw_board(f: &mut Frame, game_state: &game::GameState, area: Rect, is_player: bool, cursor_pos: (u16, u16)) {
         let inner = Rect {
             x: area.x + 5,
             y: area.y + 1,
@@ -122,6 +110,10 @@ impl TuiUI {
         
         for row in 0..10 {
             for col in 0..10 {
+                f.render_widget(
+                    Span::styled("|", Style::default().fg(Color::White)),
+                    Rect::new(inner.x+1, inner.y + 1 + row as u16, 1, 1)
+                );
                 let board = if is_player {
                     &game_state.players_board
                 } else {
@@ -132,20 +124,25 @@ impl TuiUI {
                 let x = inner.x + 2 + col as u16 * 2;
                 let y = inner.y + 1 + row as u16;
                 
-                let symbol = if cell[0] == 0 {
-                    " " // Water
+                let symbol = 
+                if cursor_pos == (row as u16, col as u16) && !is_player {
+                    "#"
+                } else if cell[0] == 0 {
+                    " "
                 } else if cell[0] == 1 {
-                    if is_player { "S" } else { "~" }
+                    if is_player { "#" } else { " " }
                 } else if cell[0] == 2 {
                     "X"
                 } else {
-                    "M"
+                    "#"
                 };
                 
-                let style = if cell[0] == 0 {
+                let style = if cursor_pos == (row as u16, col as u16) && !is_player {
+                    Style::default().fg(Color::Green)
+                } else if cell[0] == 0 {
                     Style::default().fg(Color::Blue)
                 } else if cell[0] == 1 {
-                    Style::default().fg(Color::Green)
+                    Style::default().fg(Color::Blue)
                 } else if cell[0] == 2 {
                     Style::default().fg(Color::Red)
                 } else {
@@ -156,6 +153,10 @@ impl TuiUI {
                     Span::styled(symbol, style),
                     Rect::new(x, y, 1, 1)
                 );
+                f.render_widget(
+                    Span::styled("|", Style::default().fg(Color::White)),
+                    Rect::new(x+1, y, 1, 1)
+                );
             }
         }
     }
@@ -165,6 +166,10 @@ impl TuiUI {
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
                     match key.code {
+                        KeyCode::Esc => {
+                            self.should_quit = true;
+                            return Ok(None);
+                        }
                         KeyCode::Char('q') => {
                             self.should_quit = true;
                             return Ok(None);
@@ -210,6 +215,9 @@ impl UI for TuiUI {
             match self.handle_event() {
                 Ok(Some(pos)) => return pos,
                 Ok(None) if self.should_quit => {
+                    if let Err(e) = self.cleanup() {
+                        eprintln!("Error during cleanup: {}", e);
+                    }
                     std::process::exit(0);
                 }
                 Err(e) => {
@@ -218,7 +226,8 @@ impl UI for TuiUI {
                 _ => {}
             }
         }
-    }
+}
+
     
     fn show_message(&mut self, message: &str) {
         self.message = message.to_string();
