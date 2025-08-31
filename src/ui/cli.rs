@@ -62,13 +62,10 @@ fn print_board_line(board: &[[[i32; 2]; 10]; 10], i: usize, hidden: bool, comput
 }
 
 
-
-
-struct CliUI;
+pub struct CliUI;
 
 impl UI for CliUI {
     fn render(&mut self, game_state: &game::GameState) {
-        // Renderowanie tekstowe
         print_board(&game_state.players_board, &game_state.computers_board, &game_state.computers_ships_lifes);
     }
     

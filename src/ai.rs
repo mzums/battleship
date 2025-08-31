@@ -64,7 +64,7 @@ fn continue_hitting_ship(players_board: &mut [[[i32; 2]; 10]; 10], last_hit: (us
     return ((x as i32 + possibilities[0].0) as usize, (y as i32 + possibilities[0].1) as usize);
 }
 
-fn find_optimal_move(heatmap: [[i32; 10]; 10], tui: bool) -> (usize, usize) {
+fn find_optimal_move(heatmap: [[i32; 10]; 10]) -> (usize, usize) {
     let mut max_value = 0;
     let mut moves: Vec<(usize, usize)> = Vec::new();
     let mut rng = rand::thread_rng();
@@ -83,9 +83,6 @@ fn find_optimal_move(heatmap: [[i32; 10]; 10], tui: bool) -> (usize, usize) {
     }
     let idx = rng.gen_range(0..moves.len());
     let chosen_move: (usize, usize) = moves[idx];
-    if !tui {
-        println!("Opponent's move: {}{}", (chosen_move.1 as u8 + 'A' as u8) as char, chosen_move.0);
-    }
     
     return chosen_move;
 }
@@ -97,17 +94,17 @@ fn did_last_sink(players_board: &mut [[[i32; 2]; 10]; 10], last_hit: (usize, usi
     return false;
 }
 
-pub fn computers_turn(players_board: &mut [[[i32; 2]; 10]; 10], players_ships_lifes: &mut [i32; 6], last_hit: (usize, usize), tui: bool) -> (usize, usize) {
+pub fn computers_turn(players_board: &mut [[[i32; 2]; 10]; 10], players_ships_lifes: &mut [i32; 6], last_hit: (usize, usize)) -> (usize, usize) {
     let chosen_move: (usize, usize);
 
     if last_hit == (10, 10) || did_last_sink(players_board, last_hit, players_ships_lifes) {
         let heatmap: [[i32; 10]; 10] = create_heatmap(players_board, players_ships_lifes);
-        chosen_move = find_optimal_move(heatmap, tui);
+        chosen_move = find_optimal_move(heatmap);
     } else {
         chosen_move = continue_hitting_ship(players_board, last_hit);
     }
     
-    hit(players_board, chosen_move, players_ships_lifes, tui);
+    hit(players_board, chosen_move, players_ships_lifes);
 
     return chosen_move;
 }

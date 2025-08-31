@@ -8,10 +8,10 @@ use std::io::Stdout;
 use crate::ui::main::UI;
 use crate::game;
 
-struct TuiUI {
-    terminal: Terminal<CrosstermBackend<Stdout>>,
-    cursor_pos: (u16, u16),
-    message: String,
+pub struct TuiUI {
+    pub terminal: Terminal<CrosstermBackend<Stdout>>,
+    pub cursor_pos: (u16, u16),
+    pub message: String,
 }
 
 impl UI for TuiUI {
