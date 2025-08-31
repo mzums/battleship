@@ -15,13 +15,13 @@ pub struct TuiUI {
 }
 
 impl UI for TuiUI {
-    fn render(&mut self, game_state: &game::GameState) {
-        self.terminal.draw(|f| {
+    fn render(&mut self, _game_state: &game::GameState) {
+        self.terminal.draw(|_f| {
             //tui::render_boards(f, game_state, self.cursor_pos, &self.message);
         }).unwrap();
     }
-    
-    fn get_input(&mut self) -> (usize, usize) {
+
+    fn get_input(&mut self, game_state: &game::GameState) -> (usize, usize) {
         loop {
             if let Event::Key(key) = event::read().unwrap() {
                 match key.code {
@@ -31,7 +31,7 @@ impl UI for TuiUI {
                     _ => {}
                 }
             }
-            //self.render(game_state);
+            self.render(game_state);
         }
     }
     

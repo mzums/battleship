@@ -35,7 +35,7 @@ impl GameState {
         self.did_win(&self.players_ships_lifes) || self.did_win(&self.computers_ships_lifes)
     }
     
-    pub fn hit(&mut self, board: &mut [[[i32; 2]; 10]; 10], chosen_move: (usize, usize), ships_lifes: &mut [i32; 6]) -> String {
+    pub fn hit(board: &mut [[[i32; 2]; 10]; 10], chosen_move: (usize, usize), ships_lifes: &mut [i32; 6]) -> String {
         let (row, col) = chosen_move;
         
         if board[row][col][0] == 0 {

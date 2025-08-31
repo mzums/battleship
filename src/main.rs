@@ -1,9 +1,7 @@
-use colored::Colorize;
 use clap::Parser;
 use ratatui::{
     backend::CrosstermBackend,
     Terminal,
-    crossterm::event::{self, Event, KeyCode},
 };
 use std::io::Stdout;
 
@@ -36,20 +34,15 @@ struct Args {
 }
 
 
-fn play<U: UI>(ui: &mut U, players_board: &mut [[[i32; 2]; 10]; 10], computers_board: &mut [[[i32; 2]; 10]; 10], players_ships_lifes: &mut [i32; 6], computers_ships_lifes: &mut [i32; 6], game_state: &mut game::GameState) {
-    let mut last_hit: (usize, usize) = (10, 10);
-
+fn play<U: UI>(ui: &mut U, game_state: &mut game::GameState) {
     while !game::GameState::check_if_end(game_state) {
         loop {
             ui.show_message("Your turn!");
-            let (row, col) = ui.get_input();
-            
-            game::GameState::hit(game_state, computers_board, (row, col), computers_ships_lifes);
-            
+            let (row, col) = ui.get_input(game_state);
+            game::GameState::hit(&mut game_state.computers_board, (row, col), &mut game_state.computers_ships_lifes);
             ui.render(game_state);
 
-            
-            if computers_board[row][col][0] != 2 {
+            if game_state.computers_board[row][col][0] != 2 {
                 break;
             }
         }
@@ -57,57 +50,33 @@ fn play<U: UI>(ui: &mut U, players_board: &mut [[[i32; 2]; 10]; 10], computers_b
         ui.show_message("\nOpponent's turn!");
         
         loop {
-            let last_move: (usize, usize) = ai::computers_turn(players_board, players_ships_lifes, last_hit);
+            let last_move: (usize, usize) = ai::computers_turn(&mut game_state.players_board, &mut game_state.players_ships_lifes, game_state.last_hit);
             
-            if players_board[last_move.0][last_move.1][0] == 2 {
-                last_hit = last_move;
+            if game_state.players_board[last_move.0][last_move.1][0] == 2 {
+                game_state.last_hit = last_move;
             }
+            println!("Computer hit at ({}, {})!", last_move.0 + 1, last_move.1 + 1);
             
             ui.render(game_state);
-            
-            if players_board[last_move.0][last_move.1][0] != 2 {
+
+            //print!("{:?}", &mut game_state.players_board);
+
+            if game_state.players_board[last_move.0][last_move.1][0] != 2 {
                 break;
             }
         }
     }
 }
 
-pub fn hit(board: &mut [[[i32; 2]; 10]; 10], chosen_move: (usize, usize), ships_lifes: &mut [i32; 6]) -> String{
-    let (row, col): (usize, usize) = chosen_move;
-    let msg: String;
-    
-    if board[row][col][0] == 0 {
-        board[row][col][0] = 3;
-        msg = format!("{}", "Missed!".red().bold());
-    } else if board[row][col][0] == 2 || board[row][col][0] == 3 {
-        msg = format!("{}", "Already tried this one!".red().bold());
-    } else if ships_lifes[board[row][col][1] as usize] == 1 {
-        msg = format!("{}", "Hit and sunk!".red().bold());
-        ships_lifes[board[row][col][1] as usize] -= 1;
-        board[row][col][0] = 2;
-    } else {
-        msg = format!("{}", "Hit!".red().bold());
-        ships_lifes[board[row][col][1] as usize] -= 1;
-        board[row][col][0] = 2;
-    }
-
-    return msg;
-}
-
 fn main() {
     let args = Args::parse();
     let tui = args.tui;
-    
-    
-    let mut players_board: [[[i32; 2]; 10]; 10] = [[[0; 2]; 10]; 10];
-    let mut computers_board: [[[i32; 2]; 10]; 10] = [[[0; 2]; 10]; 10];
-    let mut players_ships_lifes: [i32; 6] = [0, 5, 4, 3, 3, 2];
-    let mut computers_ships_lifes: [i32; 6] = [0, 5, 4, 3, 3, 2];
-    
-    board::place_ships(&mut players_board, &mut players_ships_lifes);
-    board::place_ships(&mut computers_board, &mut computers_ships_lifes);
 
     let mut game_state = game::GameState::new();
+
+    board::place_ships(&mut game_state.players_board, &mut game_state.players_ships_lifes);
+    board::place_ships(&mut game_state.computers_board, &mut game_state.computers_ships_lifes);
+
 
     if tui {
         //tui::init().expect("Failed to initialize TUI");
@@ -126,12 +95,12 @@ fn main() {
             message: String::new(),
         };
         ui.render(&game_state);
-        play(&mut ui, &mut players_board, &mut computers_board, &mut players_ships_lifes, &mut computers_ships_lifes, &mut game_state);
+        play(&mut ui, &mut game_state);
     } else {
         let mut ui = cli::CliUI;
         ui.render(&game_state);
-        play(&mut ui, &mut players_board, &mut computers_board, &mut players_ships_lifes, &mut computers_ships_lifes, &mut game_state);
-        cli::print_board(&players_board, &computers_board, &mut players_ships_lifes);
+        play(&mut ui, &mut game_state);
+        cli::print_board(&game_state.players_board, &game_state.computers_board, &mut game_state.players_ships_lifes);
     }
 
     /*if did_win(&players_ships_lifes) {

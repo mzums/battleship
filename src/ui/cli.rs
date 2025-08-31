@@ -68,8 +68,8 @@ impl UI for CliUI {
     fn render(&mut self, game_state: &game::GameState) {
         print_board(&game_state.players_board, &game_state.computers_board, &game_state.computers_ships_lifes);
     }
-    
-    fn get_input(&mut self) -> (usize, usize) {
+
+    fn get_input(&mut self, _game_state: &game::GameState) -> (usize, usize) {
         get_position_input()
     }
     

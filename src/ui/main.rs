@@ -3,7 +3,7 @@ use crate::ui::cli;
 
 pub trait UI {
     fn render(&mut self, game_state: &GameState);
-    fn get_input(&mut self) -> (usize, usize);
+    fn get_input(&mut self, game_state: &GameState) -> (usize, usize);
     fn show_message(&mut self, message: &str);
     fn cleanup(&mut self) -> Result<(), Box<dyn std::error::Error>>;
 }
@@ -18,8 +18,8 @@ impl UI for CliUI {
             &game_state.computers_ships_lifes
         );
     }
-    
-    fn get_input(&mut self) -> (usize, usize) {
+
+    fn get_input(&mut self, _game_state: &GameState) -> (usize, usize) {
         cli::get_position_input()
     }
     

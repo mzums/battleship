@@ -2,9 +2,9 @@ use rand::Rng;
 use std::cmp::max;
 use rand::seq::SliceRandom;
 
-use crate::hit;
 use crate::{MAX_SHIPS_LIFES, TRIED1, TRIED2};
 use crate::board::can_place_ship;
+use crate::game;
 
 
 fn go_same_direction(players_board: &mut [[[i32; 2]; 10]; 10], (mut x, mut y): (usize, usize), possibilities: [(i32, i32); 4]) -> (usize, usize) {
@@ -104,7 +104,7 @@ pub fn computers_turn(players_board: &mut [[[i32; 2]; 10]; 10], players_ships_li
         chosen_move = continue_hitting_ship(players_board, last_hit);
     }
     
-    hit(players_board, chosen_move, players_ships_lifes);
+    game::GameState::hit(players_board, chosen_move, players_ships_lifes);
 
     return chosen_move;
 }
