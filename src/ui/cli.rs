@@ -2,6 +2,9 @@ use colored::Colorize;
 use std::io;
 use regex::Regex;
 
+use crate::game;
+use crate::ui::main::UI;
+
 
 pub fn get_position_input() -> (usize, usize) {
     loop {
@@ -30,7 +33,7 @@ pub fn parse_position_input(position: &str) -> Option<(usize, usize)> {
     }
 }
 
-pub fn print_board(players_board: &[[[i32; 2]; 10]; 10], computers_board: &[[[i32; 2]; 10]; 10], computers_ships_lifes: &mut [i32; 6]) {
+pub fn print_board(players_board: &[[[i32; 2]; 10]; 10], computers_board: &[[[i32; 2]; 10]; 10], computers_ships_lifes: &[i32; 6]) {
     println!("   A B C D E F G H I J         A B C D E F G H I J");
     for i in 0..10 {
         print_board_line(players_board, i, false, computers_ships_lifes);
@@ -41,7 +44,7 @@ pub fn print_board(players_board: &[[[i32; 2]; 10]; 10], computers_board: &[[[i3
     println!("      Your board                Opponent's board");
 }
 
-fn print_board_line(board: &[[[i32; 2]; 10]; 10], i: usize, hidden: bool, computers_ships_lifes: &mut [i32; 6]) {
+fn print_board_line(board: &[[[i32; 2]; 10]; 10], i: usize, hidden: bool, computers_ships_lifes: &[i32; 6]) {
     print!("{} ", i);
     for j in 0..10 {
         print!("|");
@@ -56,4 +59,28 @@ fn print_board_line(board: &[[[i32; 2]; 10]; 10], i: usize, hidden: bool, comput
         }
     }
     print!("|");
+}
+
+
+
+
+struct CliUI;
+
+impl UI for CliUI {
+    fn render(&mut self, game_state: &game::GameState) {
+        // Renderowanie tekstowe
+        print_board(&game_state.players_board, &game_state.computers_board, &game_state.computers_ships_lifes);
+    }
+    
+    fn get_input(&mut self) -> (usize, usize) {
+        get_position_input()
+    }
+    
+    fn show_message(&mut self, message: &str) {
+        println!("{}", message);
+    }
+
+    fn cleanup(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        Ok(())
+    }
 }
