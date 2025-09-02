@@ -44,7 +44,7 @@ impl TuiUI {
             .margin(1)
             .constraints([
                 Constraint::Length(3),
-                Constraint::Min(12),
+                Constraint::Max(15),
                 Constraint::Length(3),
             ].as_ref())
             .split(size);
@@ -62,7 +62,8 @@ impl TuiUI {
         let player_block = Block::default()
             .title(" Your Board ")
             .borders(Borders::ALL)
-            .border_style(Style::default().fg(Color::Blue));
+            .border_style(Style::default().fg(Color::Blue))
+            .title_alignment(ratatui::layout::Alignment::Right);
         f.render_widget(player_block, board_chunks[0]);
         
         let computer_block = Block::default()
@@ -71,8 +72,9 @@ impl TuiUI {
             .border_style(Style::default().fg(Color::Red));
         f.render_widget(computer_block, board_chunks[1]);
         
-        Self::draw_board(f, game_state, board_chunks[0], true, cursor_pos);
-        Self::draw_board(f, game_state, board_chunks[1], false, cursor_pos);
+        let x = board_chunks[0].x + (board_chunks[0].width - 27);
+        Self::draw_board(f, game_state, board_chunks[0], true, cursor_pos, x);
+        Self::draw_board(f, game_state, board_chunks[1], false, cursor_pos, board_chunks[1].x + 5);
         
         let message_para = Paragraph::new(Text::from(message.to_string()))
             .style(Style::default().fg(Color::Green))
@@ -80,10 +82,10 @@ impl TuiUI {
         f.render_widget(message_para, chunks[2]);
     }
     
-    fn draw_board(f: &mut Frame, game_state: &game::GameState, area: Rect, is_player: bool, cursor_pos: (u16, u16)) {
+    fn draw_board(f: &mut Frame, game_state: &game::GameState, area: Rect, is_player: bool, cursor_pos: (u16, u16), x: u16) {
         let inner = Rect {
-            x: area.x + 5,
-            y: area.y + 1,
+            x: x,
+            y: area.y + 2,
             width: area.width - 2,
             height: area.height - 2,
         };
@@ -126,7 +128,7 @@ impl TuiUI {
                 
                 let symbol = 
                 if cursor_pos == (row as u16, col as u16) && !is_player {
-                    "#"
+                    "*"
                 } else if cell[0] == 0 {
                     " "
                 } else if cell[0] == 1 {
@@ -161,7 +163,7 @@ impl TuiUI {
         }
     }
     
-    fn handle_event(&mut self) -> Result<Option<(usize, usize)>, Box<dyn std::error::Error>> {
+    fn handle_event(&mut self, game_state: &game::GameState) -> Result<Option<(usize, usize)>, Box<dyn std::error::Error>> {
         if event::poll(std::time::Duration::from_millis(100))? {
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
@@ -174,16 +176,16 @@ impl TuiUI {
                             self.should_quit = true;
                             return Ok(None);
                         }
-                        KeyCode::Up if self.cursor_pos.0 > 0 => {
+                        KeyCode::Up if self.cursor_pos.0 > 0 && game_state.turn == game::Turn::Player => {
                             self.cursor_pos.0 -= 1;
                         }
-                        KeyCode::Down if self.cursor_pos.0 < 9 => {
+                        KeyCode::Down if self.cursor_pos.0 < 9 && game_state.turn == game::Turn::Player => {
                             self.cursor_pos.0 += 1;
                         }
-                        KeyCode::Left if self.cursor_pos.1 > 0 => {
+                        KeyCode::Left if self.cursor_pos.1 > 0 && game_state.turn == game::Turn::Player => {
                             self.cursor_pos.1 -= 1;
                         }
-                        KeyCode::Right if self.cursor_pos.1 < 9 => {
+                        KeyCode::Right if self.cursor_pos.1 < 9 && game_state.turn == game::Turn::Player => {
                             self.cursor_pos.1 += 1;
                         }
                         KeyCode::Enter => {
@@ -209,10 +211,13 @@ impl UI for TuiUI {
     }
 
     fn get_input(&mut self, game_state: &game::GameState) -> (usize, usize) {
+        if game_state.turn == game::Turn::Computer {
+            {}
+        }
         loop {
             self.render(game_state);
             
-            match self.handle_event() {
+            match self.handle_event(game_state) {
                 Ok(Some(pos)) => return pos,
                 Ok(None) if self.should_quit => {
                     if let Err(e) = self.cleanup() {
@@ -226,7 +231,7 @@ impl UI for TuiUI {
                 _ => {}
             }
         }
-}
+    }
 
     
     fn show_message(&mut self, message: &str) {

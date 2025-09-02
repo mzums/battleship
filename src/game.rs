@@ -1,11 +1,19 @@
 use crate::board::place_ships;
 
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Turn {
+    Player,
+    Computer,
+}
+
 pub struct GameState {
     pub players_board: [[[i32; 2]; 10]; 10],
     pub computers_board: [[[i32; 2]; 10]; 10],
     pub players_ships_lifes: [i32; 6],
     pub computers_ships_lifes: [i32; 6],
     pub last_hit: (usize, usize),
+    pub turn: Turn,
 }
 
 impl GameState {
@@ -24,6 +32,7 @@ impl GameState {
             players_ships_lifes,
             computers_ships_lifes,
             last_hit: (10, 10),
+            turn: Turn::Player,
         }
     }
     
@@ -40,17 +49,17 @@ impl GameState {
         
         if board[row][col][0] == 0 {
             board[row][col][0] = 3;
-            "Missed!".to_string()
+            "\nMissed!".to_string()
         } else if board[row][col][0] == 2 || board[row][col][0] == 3 {
-            "Already tried this one!".to_string()
+            "\nAlready tried this one!".to_string()
         } else if ships_lifes[board[row][col][1] as usize] == 1 {
             ships_lifes[board[row][col][1] as usize] -= 1;
             board[row][col][0] = 2;
-            "Hit and sunk!".to_string()
+            "\nHit and sunk!".to_string()
         } else {
             ships_lifes[board[row][col][1] as usize] -= 1;
             board[row][col][0] = 2;
-            "Hit!".to_string()
+            "\nHit!".to_string()
         }
     }
 }
